@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Windey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08080A;
+    --surface:#131316;
+    --line:#212126;
+    --text:#F2F2F4;
+    --muted:#87878E;
+    --accent:#8FE3D6;
+    --accent2:#B48FE8;
+    --accent-dim:#3E6F68;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-user-select:none; user-select:none;
+  }
+  h1,h2{font-family:'Space Grotesk',sans-serif;}
+
+  #scroller{
+    height:100svh; overflow-y:auto;
+    scroll-snap-type:y proximity;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    position:relative; z-index:3;
+  }
+  section{
+    min-height:100svh;
+    scroll-snap-align:center;
+    display:flex; flex-direction:column; justify-content:center;
+    position:relative;
+    padding:2rem 1.7rem;
+    max-width:640px;
+    margin:0 auto;
+    -webkit-user-select:text; user-select:text;
+    opacity:0.4;
+    transition:opacity 0.4s ease;
+  }
+  section.in-view{ opacity:1; }
+
+  #dots{
+    position:fixed; top:50%; right:1.5rem; transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:0.9rem; z-index:50;
+  }
+  @media (max-width:600px){ #dots{ right:0.9rem; } }
+  .dot{ position:relative; width:7px; height:7px; border-radius:50%; background:var(--line); cursor:pointer; transition:background 0.25s ease, transform 0.25s ease; }
+  .dot.active{ background:var(--accent); transform:scale(1.5); }
+  .dot::after{
+    content:attr(data-label); position:absolute; right:16px; top:50%; transform:translateY(-50%);
+    font-size:0.75rem; color:var(--muted); white-space:nowrap; opacity:0; transition:opacity 0.2s ease; pointer-events:none;
+  }
+  .dot:hover::after{ opacity:1; }
+
+  #hero{ overflow:hidden; }
+  #wind-svg{ position:absolute; inset:0; width:100%; height:100%; opacity:0.5; pointer-events:none; transition:transform 0.3s ease-out; }
+  .wind-line{ fill:none; stroke:var(--accent-dim); stroke-width:1; stroke-linecap:round; opacity:0.6; stroke-dasharray:8 14; animation:drift 7s linear infinite; }
+  .wind-line:nth-child(2){ stroke:var(--accent); opacity:0.35; animation-duration:5.5s; animation-direction:reverse; }
+  .wind-line:nth-child(3){ animation-duration:9s; }
+  @keyframes drift{ to{ stroke-dashoffset:-220; } }
+
+  .hero-inner{ position:relative; max-width:600px; }
+  .eyebrow{ color:var(--muted); font-size:0.95rem; margin-bottom:1rem; }
+  h1{
+    font-size:clamp(2.6rem, 9vw, 4.6rem); font-weight:700; line-height:1.02; letter-spacing:-0.03em;
+    background:linear-gradient(100deg, var(--text) 30%, var(--accent) 55%, var(--accent2) 70%, var(--text) 90%);
+    background-size:250% 100%; -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:sheen 6s ease-in-out infinite;
+  }
+  @keyframes sheen{ 0%,100%{ background-position:0% 50%;} 50%{ background-position:100% 50%;} }
+  .tagline{ margin-top:1.25rem; font-size:1.15rem; color:var(--muted); max-width:36ch; line-height:1.6; }
+  .scroll-hint{
+    position:absolute; bottom:2rem; left:1.7rem; font-size:0.85rem; color:var(--muted);
+    display:flex; align-items:center; gap:0.5rem; animation:bob 1.8s ease-in-out infinite;
+  }
+  @keyframes bob{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(5px);} }
+  .scroll-hint::before{ content:''; width:1px; height:22px; background:var(--line); display:inline-block; }
+
+  h2{ font-size:1.9rem; font-weight:500; margin-bottom:1.2rem; letter-spacing:-0.01em; }
+  p{ color:var(--muted); line-height:1.75; font-size:1.03rem; max-width:56ch; }
+
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  .tag-row{ display:flex; flex-wrap:wrap; gap:0.6rem; }
+  .tag{
+    border:1px solid var(--line); padding:0.55rem 1rem; border-radius:999px;
+    font-size:0.92rem; color:var(--muted); cursor:default;
+    transition:border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  }
+  .tag:hover{ border-color:var(--accent-dim); color:var(--text); transform:translateY(-2px); }
+
+  .project-card{
+    border:1px solid var(--line); background:var(--surface); border-radius:16px;
+    padding:1.8rem; margin-top:1.5rem;
+    transition:transform 0.15s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    transform-style:preserve-3d;
+  }
+  .project-card:hover{ border-color:var(--accent-dim); box-shadow:0 20px 50px -20px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .project-title{ font-family:'Space Grotesk',sans-serif; font-size:1.2rem; margin-bottom:0.6rem; }
+  .gh-btn{
+    display:inline-flex; align-items:center; gap:0.5rem; margin-top:1.2rem;
+    background:transparent; border:1px solid var(--line); color:var(--text);
+    padding:0.65rem 1.2rem; border-radius:999px; font-family:'Inter',sans-serif;
+    font-size:0.9rem; text-decoration:none; cursor:pointer;
+    transition:border-color 0.2s ease, background 0.2s ease;
+  }
+  .gh-btn:hover{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 8%, transparent); }
+
+  .connect-card{
+    border:1px solid var(--line); background:var(--surface); border-radius:14px;
+    padding:1.5rem 1.7rem; display:flex; align-items:center; justify-content:space-between;
+    gap:1rem; transition:border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .connect-card:hover{ border-color:var(--accent-dim); box-shadow:0 0 40px -12px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .connect-name{ font-size:1.05rem; }
+  .connect-handle{ color:var(--accent); font-family:'Space Grotesk',sans-serif; font-size:1.05rem; }
+  .copy-btn{
+    background:transparent; border:1px solid var(--line); color:var(--muted);
+    padding:0.5rem 1rem; border-radius:8px; font-family:'Inter',sans-serif;
+    font-size:0.85rem; cursor:pointer; transition:all 0.2s ease;
+  }
+  .copy-btn:hover{ color:var(--text); border-color:var(--accent-dim); }
+  .copy-btn:focus-visible, a:focus-visible, button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  footer{ position:absolute; bottom:1.2rem; left:0; right:0; text-align:center; color:var(--line); font-size:0.8rem; }
+
+  #intro{
+    position:fixed; inset:0; z-index:100; background:var(--bg);
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    transition:opacity 0.7s ease, visibility 0.7s ease;
+  }
+  #intro.hide{ opacity:0; visibility:hidden; }
+  .intro-glow{
+    position:absolute; width:60vw; height:60vw; border-radius:50%;
+    background:radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 70%);
+    opacity:0; animation:glow-in 1.6s ease forwards;
+  }
+  @keyframes glow-in{ 0%{ opacity:0; transform:scale(0.7);} 100%{ opacity:1; transform:scale(1);} }
+  #intro span{
+    position:relative;
+    font-family:'Space Grotesk',sans-serif; font-size:clamp(2rem,8vw,3.4rem);
+    font-weight:700; letter-spacing:-0.02em; color:var(--text);
+    opacity:0; animation:intro-in 0.8s ease forwards 0.2s;
+  }
+  #intro .intro-sub{
+    position:absolute; bottom:38%; font-family:'Inter',sans-serif; font-size:0.9rem;
+    color:var(--muted); opacity:0; animation:intro-sub-in 0.8s ease forwards 0.7s;
+  }
+  @keyframes intro-in{
+    0%{ opacity:0; transform:translateY(14px) scale(0.96); filter:blur(6px); }
+    100%{ opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+  }
+  @keyframes intro-sub-in{ 0%{ opacity:0; transform:translateY(8px);} 100%{ opacity:1; transform:translateY(0);} }
+
+  #ambient{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  #ambient::before, #ambient::after{ content:''; position:absolute; border-radius:50%; filter:blur(90px); opacity:0.16; will-change:transform; }
+  #ambient::before{ width:46vw; height:46vw; background:var(--accent); top:-10%; left:-10%; animation:float1 22s ease-in-out infinite; }
+  #ambient::after{ width:40vw; height:40vw; background:var(--accent2); bottom:-12%; right:-8%; animation:float2 26s ease-in-out infinite; }
+  @keyframes float1{ 0%,100%{ transform:translate(0,0);} 50%{ transform:translate(6vw,8vw);} }
+  @keyframes float2{ 0%,100%{ transform:translate(0,0);} 50%{ transform:translate(-7vw,-6vw);} }
+
+  #particles{ position:fixed; inset:0; z-index:1; pointer-events:none; }
+
+  #grain{
+    position:fixed; inset:-10%; z-index:2; pointer-events:none; opacity:0.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .wind-line{ animation:none; }
+    .reveal{ transition:none; }
+    .scroll-hint{ animation:none; }
+    #intro{ display:none; }
+    #scroller{ scroll-snap-type:none; }
+    h1{ animation:none; }
+    section{ opacity:1; }
+  }
+</style>
+</head>
+<body>
+
+<div id="ambient"></div>
+<canvas id="particles"></canvas>
+<div id="grain"></div>
+
+<div id="intro">
+  <div class="intro-glow"></div>
+  <span>Windey</span>
+  <div class="intro-sub">give me a sec</div>
+</div>
+
+<div id="dots">
+  <div class="dot" data-target="hero" data-label="hey"></div>
+  <div class="dot" data-target="about" data-label="about"></div>
+  <div class="dot" data-target="interests" data-label="into"></div>
+  <div class="dot" data-target="project" data-label="made"></div>
+  <div class="dot" data-target="connect" data-label="connect"></div>
+</div>
+
+<div id="scroller">
+
+  <section id="hero">
+    <svg id="wind-svg" viewBox="0 0 800 600" preserveAspectRatio="none">
+      <path class="wind-line" d="M -50 180 Q 200 140 400 190 T 850 160"/>
+      <path class="wind-line" d="M -50 320 Q 220 380 420 310 T 850 350"/>
+      <path class="wind-line" d="M -50 460 Q 250 420 450 470 T 850 440"/>
+    </svg>
+    <div class="hero-inner">
+      <div class="eyebrow">hey, i'm</div>
+      <h1>Windey</h1>
+      <p class="tagline">just messing around till stuff makes sense — code, sound, random bits of the internet nobody else bothers with.</p>
+    </div>
+    <div class="scroll-hint">scroll</div>
+  </section>
+
+  <section id="about">
+    <h2 class="reveal">not really following a plan</h2>
+    <p class="reveal">i just like messing with stuff. learning to code, exploring random corners of the internet, picking up new things as i go — no real end goal, just seeing where it takes me.</p>
+  </section>
+
+  <section id="interests">
+    <h2 class="reveal">stuff i'm into</h2>
+    <div class="tag-row reveal">
+      <span class="tag">testing random apps</span>
+      <span class="tag">digging through weird internet finds</span>
+      <span class="tag">roblox games in luau</span>
+      <span class="tag">discord bots</span>
+      <span class="tag">poking around in mobile apps</span>
+    </div>
+  </section>
+
+  <section id="project">
+    <h2 class="reveal">projects i made</h2>
+    <div class="project-card reveal" id="tilt-card">
+      <div class="project-title">browser piano</div>
+      <p>built a piano you can play right in the browser, with a bunch of popular songs to learn along the way. still adding more to it.</p>
+      <a class="gh-btn" href="#" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </section>
+
+  <section id="connect">
+    <h2 class="reveal">hit me up</h2>
+    <div class="connect-card reveal">
+      <div>
+        <div class="connect-name">Discord</div>
+        <div class="connect-handle">@_windey_</div>
+      </div>
+      <button class="copy-btn" onclick="navigator.clipboard.writeText('_windey_'); this.textContent='Copied'; setTimeout(()=>this.textContent='Copy',1500)">Copy</button>
+    </div>
+    <footer>made with curiosity</footer>
+  </section>
+
+</div>
+
+<script>
+  window.addEventListener('load', ()=>{
+    setTimeout(()=>{ document.getElementById('intro').classList.add('hide'); }, 1500);
+  });
+
+  const hero = document.getElementById('hero');
+  const windSvg = document.getElementById('wind-svg');
+  hero.addEventListener('mousemove', (e)=>{
+    const x = (e.clientX / window.innerWidth - 0.5) * 14;
+    const y = (e.clientY / window.innerHeight - 0.5) * 10;
+    windSvg.style.transform = `translate(${x}px, ${y}px)`;
+  });
+
+  const tiltCard = document.getElementById('tilt-card');
+  if(tiltCard){
+    tiltCard.addEventListener('mousemove', (e)=>{
+      const r = tiltCard.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      tiltCard.style.transform = `perspective(600px) rotateX(${-py*6}deg) rotateY(${px*6}deg)`;
+    });
+    tiltCard.addEventListener('mouseleave', ()=>{ tiltCard.style.transform = 'perspective(600px) rotateX(0) rotateY(0)'; });
+  }
+
+  const revealEls = document.querySelectorAll('.reveal');
+  const revealIo = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); revealIo.unobserve(e.target); } });
+  }, {threshold:0.2});
+  revealEls.forEach(el=>revealIo.observe(el));
+
+  const sections = document.querySelectorAll('section');
+  const dots = document.querySelectorAll('.dot');
+  const dotMap = {};
+  dots.forEach(d=> dotMap[d.dataset.target] = d);
+  dots.forEach(d=> d.addEventListener('click', ()=>{
+    document.getElementById(d.dataset.target).scrollIntoView({behavior:'smooth', block:'center'});
+  }));
+  const navIo = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('in-view');
+        dots.forEach(d=>d.classList.remove('active'));
+        dotMap[e.target.id].classList.add('active');
+      } else {
+        e.target.classList.remove('in-view');
+      }
+    });
+  }, {threshold:0.55});
+  sections.forEach(s=>navIo.observe(s));
+
+  // ambient particle field
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let w, h, particles;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function resize(){
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  function initParticles(){
+    particles = Array.from({length: 46}, ()=>({
+      x: Math.random()*w, y: Math.random()*h,
+      r: Math.random()*1.6 + 0.4,
+      vx: (Math.random()-0.5)*0.15,
+      vy: (Math.random()-0.5)*0.15,
+      c: Math.random() > 0.5 ? '143,227,214' : '180,143,232'
+    }));
+  }
+  function tick(){
+    ctx.clearRect(0,0,w,h);
+    particles.forEach(p=>{
+      p.x += p.vx; p.y += p.vy;
+      if(p.x < 0) p.x = w; if(p.x > w) p.x = 0;
+      if(p.y < 0) p.y = h; if(p.y > h) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${p.c},0.35)`;
+      ctx.fill();
+    });
+    if(!reduceMotion) requestAnimationFrame(tick);
+  }
+  resize(); initParticles();
+  window.addEventListener('resize', ()=>{ resize(); initParticles(); });
+  tick();
+</script>
+
+</body>
+</html>
